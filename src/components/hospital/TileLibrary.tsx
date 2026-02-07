@@ -1,9 +1,10 @@
 import { tileLibraryDefaults } from '@/data/mockData';
 
 export default function TileLibrary() {
-  const handleDragStart = (e: React.DragEvent, tipo: string, nome: string) => {
+  const handleDragStart = (e: React.DragEvent, tipo: string, nome: string, imagem_url: string) => {
     e.dataTransfer.setData('new-tile-type', tipo);
     e.dataTransfer.setData('new-tile-nome', nome);
+    e.dataTransfer.setData('new-tile-image', imagem_url);
     e.dataTransfer.effectAllowed = 'copy';
   };
 
@@ -13,13 +14,13 @@ export default function TileLibrary() {
       <div className="grid grid-cols-2 gap-2">
         {tileLibraryDefaults.map(item => (
           <div
-            key={item.tipo}
+            key={item.tipo + item.nome}
             draggable
-            onDragStart={(e) => handleDragStart(e, item.tipo, item.nome)}
-            className="glass rounded-lg p-3 border border-border cursor-grab active:cursor-grabbing hover:border-primary/30 transition-colors text-center"
+            onDragStart={(e) => handleDragStart(e, item.tipo, item.nome, item.imagem_url)}
+            className="glass rounded-lg border border-border cursor-grab active:cursor-grabbing hover:border-primary/30 transition-colors text-center overflow-hidden"
           >
-            <div className="text-lg mb-1">{item.icon}</div>
-            <span className="text-[10px] font-medium text-muted-foreground">{item.nome}</span>
+            <img src={item.imagem_url} alt={item.nome} className="w-full h-16 object-cover" draggable={false} />
+            <span className="text-[10px] font-medium text-muted-foreground block py-1.5">{item.nome}</span>
           </div>
         ))}
       </div>

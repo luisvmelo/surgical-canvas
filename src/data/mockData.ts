@@ -72,17 +72,27 @@ export const mockAlerts: Alert[] = [
   { id: 'A6', type: 'info', message: 'Dr. Carlos Lima chegou ao CC', timestamp: t(7,45) },
 ];
 
+const tileImageMap: Record<string, string> = {
+  sala_cirurgica: '/tiles/sala-cirurgica.png',
+  consultorio: '/tiles/consultorio.png',
+  uti: '/tiles/uti.png',
+  recuperacao: '/tiles/recuperacao.png',
+  recepcao: '/tiles/recepcao.png',
+  corredor: '/tiles/corredor.png',
+  quarto: '/tiles/quarto.png',
+};
+
 const defaultTiles: TileData[] = [
-  { id: 'T01', nome: 'Sala Cirúrgica 1', tipo: 'sala_cirurgica', capacidade: 1, status: 'ocupado', propriedades: {}, posicao: { x: 0, y: 0 }, tamanho: { w: 2, h: 2 }, rotacao: 0, layer: 'salas', tags: ['principal'], notas: '' },
-  { id: 'T02', nome: 'Sala Cirúrgica 2', tipo: 'sala_cirurgica', capacidade: 1, status: 'ocupado', propriedades: {}, posicao: { x: 180, y: 0 }, tamanho: { w: 2, h: 2 }, rotacao: 0, layer: 'salas', tags: [], notas: '' },
-  { id: 'T03', nome: 'Sala Cirúrgica 3', tipo: 'sala_cirurgica', capacidade: 1, status: 'manutencao', propriedades: {}, posicao: { x: 360, y: 0 }, tamanho: { w: 2, h: 2 }, rotacao: 0, layer: 'salas', tags: [], notas: 'Em manutenção preventiva' },
-  { id: 'T04', nome: 'UTI', tipo: 'uti', capacidade: 12, status: 'ativo', propriedades: { leitos_ocupados: 11 }, posicao: { x: 0, y: 260 }, tamanho: { w: 3, h: 2 }, rotacao: 0, layer: 'salas', tags: ['crítico'], notas: '' },
-  { id: 'T05', nome: 'Recuperação', tipo: 'recuperacao', capacidade: 8, status: 'ativo', propriedades: {}, posicao: { x: 260, y: 260 }, tamanho: { w: 3, h: 2 }, rotacao: 0, layer: 'salas', tags: [], notas: '' },
-  { id: 'T06', nome: 'Recepção CC', tipo: 'recepcao', capacidade: 0, status: 'ativo', propriedades: {}, posicao: { x: 0, y: 480 }, tamanho: { w: 2, h: 1 }, rotacao: 0, layer: 'estrutura', tags: [], notas: '' },
-  { id: 'T07', nome: 'CME', tipo: 'cme', capacidade: 0, status: 'ativo', propriedades: {}, posicao: { x: 540, y: 0 }, tamanho: { w: 2, h: 2 }, rotacao: 0, layer: 'estrutura', tags: [], notas: '' },
-  { id: 'T08', nome: 'Corredor Principal', tipo: 'corredor', capacidade: 0, status: 'ativo', propriedades: {}, posicao: { x: 0, y: 170 }, tamanho: { w: 8, h: 1 }, rotacao: 0, layer: 'estrutura', tags: [], notas: '' },
-  { id: 'T09', nome: 'Almoxarifado', tipo: 'almoxarifado', capacidade: 0, status: 'ativo', propriedades: {}, posicao: { x: 540, y: 260 }, tamanho: { w: 2, h: 2 }, rotacao: 0, layer: 'estrutura', tags: [], notas: '' },
-  { id: 'T10', nome: 'Sala Cirúrgica 4', tipo: 'sala_cirurgica', capacidade: 1, status: 'ocupado', propriedades: {}, posicao: { x: 180, y: 480 }, tamanho: { w: 2, h: 1 }, rotacao: 0, layer: 'salas', tags: ['cardíaca'], notas: '' },
+  { id: 'T01', nome: 'Sala Cirúrgica 1', tipo: 'sala_cirurgica', imagem_url: '/tiles/sala-cirurgica.png', capacidade: 1, status: 'ocupado', propriedades: {}, posicao: { x: 0, y: 0 }, tamanho: { w: 2, h: 2 }, rotacao: 0, layer: 'salas', tags: ['principal'], notas: '' },
+  { id: 'T02', nome: 'Sala Cirúrgica 2', tipo: 'sala_cirurgica', imagem_url: '/tiles/sala-cirurgica.png', capacidade: 1, status: 'ocupado', propriedades: {}, posicao: { x: 180, y: 0 }, tamanho: { w: 2, h: 2 }, rotacao: 0, layer: 'salas', tags: [], notas: '' },
+  { id: 'T03', nome: 'Sala Cirúrgica 3', tipo: 'sala_cirurgica', imagem_url: '/tiles/sala-cirurgica.png', capacidade: 1, status: 'manutencao', propriedades: {}, posicao: { x: 360, y: 0 }, tamanho: { w: 2, h: 2 }, rotacao: 0, layer: 'salas', tags: [], notas: 'Em manutenção preventiva' },
+  { id: 'T04', nome: 'UTI', tipo: 'uti', imagem_url: '/tiles/uti.png', capacidade: 12, status: 'ativo', propriedades: { leitos_ocupados: 11 }, posicao: { x: 0, y: 260 }, tamanho: { w: 2, h: 2 }, rotacao: 0, layer: 'salas', tags: ['crítico'], notas: '' },
+  { id: 'T05', nome: 'Recuperação', tipo: 'recuperacao', imagem_url: '/tiles/recuperacao.png', capacidade: 8, status: 'ativo', propriedades: {}, posicao: { x: 200, y: 260 }, tamanho: { w: 2, h: 2 }, rotacao: 0, layer: 'salas', tags: [], notas: '' },
+  { id: 'T06', nome: 'Recepção CC', tipo: 'recepcao', imagem_url: '/tiles/recepcao.png', capacidade: 0, status: 'ativo', propriedades: {}, posicao: { x: 0, y: 480 }, tamanho: { w: 2, h: 2 }, rotacao: 0, layer: 'estrutura', tags: [], notas: '' },
+  { id: 'T07', nome: 'Consultório', tipo: 'consultorio', imagem_url: '/tiles/consultorio.png', capacidade: 0, status: 'ativo', propriedades: {}, posicao: { x: 540, y: 0 }, tamanho: { w: 2, h: 2 }, rotacao: 0, layer: 'salas', tags: [], notas: '' },
+  { id: 'T08', nome: 'Corredor Principal', tipo: 'corredor', imagem_url: '/tiles/corredor.png', capacidade: 0, status: 'ativo', propriedades: {}, posicao: { x: 180, y: 170 }, tamanho: { w: 1, h: 3 }, rotacao: 0, layer: 'estrutura', tags: [], notas: '' },
+  { id: 'T09', nome: 'Quarto 101', tipo: 'custom', imagem_url: '/tiles/quarto.png', capacidade: 1, status: 'ativo', propriedades: {}, posicao: { x: 400, y: 260 }, tamanho: { w: 2, h: 2 }, rotacao: 0, layer: 'salas', tags: [], notas: '' },
+  { id: 'T10', nome: 'Quarto 102', tipo: 'custom', imagem_url: '/tiles/quarto.png', capacidade: 1, status: 'ocupado', propriedades: {}, posicao: { x: 200, y: 480 }, tamanho: { w: 2, h: 2 }, rotacao: 0, layer: 'salas', tags: [], notas: '' },
 ];
 
 export const mockLayout: HospitalLayout = {
@@ -97,14 +107,12 @@ export const mockLayout: HospitalLayout = {
   updated_at: new Date().toISOString(),
 };
 
-export const tileLibraryDefaults: { tipo: TileData['tipo']; nome: string; icon: string }[] = [
-  { tipo: 'sala_cirurgica', nome: 'Sala Cirúrgica', icon: '🏥' },
-  { tipo: 'consultorio', nome: 'Consultório', icon: '🩺' },
-  { tipo: 'uti', nome: 'UTI', icon: '❤️‍🩹' },
-  { tipo: 'recuperacao', nome: 'Recuperação', icon: '🛏️' },
-  { tipo: 'recepcao', nome: 'Recepção', icon: '🪑' },
-  { tipo: 'almoxarifado', nome: 'Almoxarifado', icon: '📦' },
-  { tipo: 'cme', nome: 'CME', icon: '🧪' },
-  { tipo: 'corredor', nome: 'Corredor', icon: '↔️' },
-  { tipo: 'elevador', nome: 'Elevador', icon: '🛗' },
+export const tileLibraryDefaults: { tipo: TileData['tipo']; nome: string; icon: string; imagem_url: string }[] = [
+  { tipo: 'sala_cirurgica', nome: 'Sala Cirúrgica', icon: '🏥', imagem_url: '/tiles/sala-cirurgica.png' },
+  { tipo: 'consultorio', nome: 'Consultório', icon: '🩺', imagem_url: '/tiles/consultorio.png' },
+  { tipo: 'uti', nome: 'UTI', icon: '❤️‍🩹', imagem_url: '/tiles/uti.png' },
+  { tipo: 'recuperacao', nome: 'Recuperação', icon: '🛏️', imagem_url: '/tiles/recuperacao.png' },
+  { tipo: 'recepcao', nome: 'Recepção', icon: '🪑', imagem_url: '/tiles/recepcao.png' },
+  { tipo: 'corredor', nome: 'Corredor', icon: '↔️', imagem_url: '/tiles/corredor.png' },
+  { tipo: 'custom', nome: 'Quarto', icon: '🛏️', imagem_url: '/tiles/quarto.png' },
 ];
