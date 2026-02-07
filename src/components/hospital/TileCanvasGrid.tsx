@@ -27,27 +27,25 @@ interface TileCanvasGridProps {
 const TILE_UNIT = 80;
 const DEFAULT_CROP: ImageCrop = { x: 0, y: 0, w: 1, h: 1 };
 
-/** Render a cropped image: shows only the crop rect portion filling the tile */
 function CroppedImage({ src, crop, alt }: { src: string; crop: ImageCrop; alt: string }) {
-  // We scale the image so the crop rect fills the container
-  // Image width = 100% / crop.w, height = 100% / crop.h
-  // Position: -crop.x / crop.w * 100%, -crop.y / crop.h * 100%
+  const hasCrop = crop.x !== 0 || crop.y !== 0 || crop.w !== 1 || crop.h !== 1;
+
+  if (!hasCrop) {
+    return <img src={src} alt={alt} className="w-full h-full object-cover" draggable={false} />;
+  }
+
   return (
-    <div className="w-full h-full overflow-hidden relative">
-      <img
-        src={src}
-        alt={alt}
-        draggable={false}
-        className="absolute pointer-events-none"
-        style={{
-          width: `${100 / crop.w}%`,
-          height: `${100 / crop.h}%`,
-          left: `${-(crop.x / crop.w) * 100}%`,
-          top: `${-(crop.y / crop.h) * 100}%`,
-          objectFit: 'fill',
-        }}
-      />
-    </div>
+    <div
+      className="w-full h-full"
+      role="img"
+      aria-label={alt}
+      style={{
+        backgroundImage: `url(${src})`,
+        backgroundSize: `${100 / crop.w}% ${100 / crop.h}%`,
+        backgroundPosition: `${crop.w < 1 ? (crop.x / (1 - crop.w)) * 100 : 0}% ${crop.h < 1 ? (crop.y / (1 - crop.h)) * 100 : 0}%`,
+        backgroundRepeat: 'no-repeat',
+      }}
+    />
   );
 }
 
