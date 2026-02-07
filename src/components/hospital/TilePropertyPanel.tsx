@@ -1,9 +1,8 @@
 import { TileData, HospitalLayout, ImageCrop } from '@/data/types';
-import { RotateCw, Trash2, Copy, X, Minus, Plus } from 'lucide-react';
+import { RotateCw, Trash2, Copy, X, Minus, Plus, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Slider } from '@/components/ui/slider';
 
 interface TilePropertyPanelProps {
   tile: TileData;
@@ -18,12 +17,6 @@ export default function TilePropertyPanel({ tile, layout, onUpdateLayout, onClos
       ...layout,
       tiles: layout.tiles.map(t => t.id === tile.id ? { ...t, ...updates } : t),
     });
-  };
-
-  const crop: ImageCrop = { objectFit: 'cover', objectPosition: 'center center', scale: 1, offsetX: 0, offsetY: 0, ...tile.imageCrop };
-
-  const updateCrop = (updates: Partial<ImageCrop>) => {
-    updateTile({ imageCrop: { ...crop, ...updates } });
   };
 
   const deleteTile = () => {
@@ -42,6 +35,11 @@ export default function TilePropertyPanel({ tile, layout, onUpdateLayout, onClos
     updateTile({ tamanho: { w: Math.max(0.5, tile.tamanho.w + dw), h: Math.max(0.5, tile.tamanho.h + dh) } });
   };
 
+  const resetCrop = () => updateTile({ imageCrop: { x: 0, y: 0, w: 1, h: 1 } });
+
+  const crop = tile.imageCrop || { x: 0, y: 0, w: 1, h: 1 };
+  const hasCrop = crop.x !== 0 || crop.y !== 0 || crop.w !== 1 || crop.h !== 1;
+
   return (
     <div className="glass rounded-xl border border-border p-4 space-y-4 animate-slide-in max-h-[calc(100vh-200px)] overflow-y-auto scrollbar-thin">
       <div className="flex items-center justify-between">
@@ -51,15 +49,17 @@ export default function TilePropertyPanel({ tile, layout, onUpdateLayout, onClos
 
       {/* Preview */}
       {tile.imagem_url && (
-        <div className="rounded-lg overflow-hidden border border-border aspect-square">
+        <div className="rounded-lg overflow-hidden border border-border aspect-square relative">
           <img
             src={tile.imagem_url}
             alt={tile.nome}
-            className="w-full h-full"
+            className="absolute pointer-events-none"
             style={{
-              objectFit: crop.objectFit,
-              objectPosition: crop.objectPosition,
-              transform: `scale(${crop.scale})`,
+              width: `${100 / crop.w}%`,
+              height: `${100 / crop.h}%`,
+              left: `${-(crop.x / crop.w) * 100}%`,
+              top: `${-(crop.y / crop.h) * 100}%`,
+              objectFit: 'fill',
             }}
           />
         </div>
@@ -94,54 +94,23 @@ export default function TilePropertyPanel({ tile, layout, onUpdateLayout, onClos
           </div>
         </div>
 
-        {/* Image Crop controls */}
-        {tile.imagem_url && (
-          <>
-            <div>
-              <label className="text-[10px] text-muted-foreground uppercase tracking-wider">Ajuste da Imagem</label>
-              <Select value={crop.objectFit} onValueChange={v => updateCrop({ objectFit: v as ImageCrop['objectFit'] })}>
-                <SelectTrigger className="mt-1 h-8 text-sm bg-secondary border-border">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="cover">Preencher (cortar)</SelectItem>
-                  <SelectItem value="contain">Encaixar (sem corte)</SelectItem>
-                  <SelectItem value="fill">Esticar</SelectItem>
-                </SelectContent>
-              </Select>
+        {/* Crop info */}
+        {tile.imagem_url && hasCrop && (
+          <div>
+            <label className="text-[10px] text-muted-foreground uppercase tracking-wider">Recorte</label>
+            <div className="flex items-center justify-between mt-1">
+              <span className="text-[9px] text-muted-foreground font-mono">
+                {Math.round(crop.x * 100)}%, {Math.round(crop.y * 100)}% — {Math.round(crop.w * 100)}×{Math.round(crop.h * 100)}%
+              </span>
+              <button onClick={resetCrop} className="text-[9px] text-destructive hover:underline flex items-center gap-0.5">
+                <RotateCcw size={9} /> Resetar
+              </button>
             </div>
+          </div>
+        )}
 
-            <div>
-              <label className="text-[10px] text-muted-foreground uppercase tracking-wider">Posição</label>
-              <div className="grid grid-cols-3 gap-1 mt-1">
-                {['top left','top center','top right','center left','center center','center right','bottom left','bottom center','bottom right'].map(pos => (
-                  <button
-                    key={pos}
-                    onClick={() => updateCrop({ objectPosition: pos })}
-                    className={`h-6 rounded text-[8px] transition-colors ${
-                      crop.objectPosition === pos
-                        ? 'bg-primary text-primary-foreground'
-                        : 'bg-secondary text-muted-foreground hover:bg-card-hover'
-                    }`}
-                  >
-                    {pos.split(' ').map(w => w[0].toUpperCase()).join('')}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div>
-              <label className="text-[10px] text-muted-foreground uppercase tracking-wider">Zoom da Imagem ({Math.round(crop.scale * 100)}%)</label>
-              <Slider
-                value={[crop.scale]}
-                onValueChange={([v]) => updateCrop({ scale: v })}
-                min={0.5}
-                max={3}
-                step={0.1}
-                className="mt-2"
-              />
-            </div>
-          </>
+        {tile.imagem_url && !hasCrop && (
+          <p className="text-[9px] text-muted-foreground">Duplo clique no tile para recortar a imagem</p>
         )}
 
         <div>
