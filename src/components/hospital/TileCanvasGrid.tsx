@@ -138,10 +138,12 @@ export default function TileCanvasGrid({ layout, onUpdateLayout, selectedTileId,
     if (!newTileType) return;
 
     const pos = screenToCanvas(e.clientX, e.clientY);
+    const imageUrl = e.dataTransfer.getData('new-tile-image');
     const newTile: TileData = {
       id: `T${Date.now()}`,
       nome: e.dataTransfer.getData('new-tile-nome') || 'Novo Tile',
       tipo: newTileType as TileData['tipo'],
+      imagem_url: imageUrl || undefined,
       capacidade: 0,
       status: 'ativo',
       propriedades: {},
@@ -239,29 +241,28 @@ export default function TileCanvasGrid({ layout, onUpdateLayout, selectedTileId,
                 zIndex: isDragging ? 100 : isSelected ? 50 : 1,
                 transition: isDragging ? 'none' : 'box-shadow 0.2s',
               }}
-              className={`rounded-lg border-2 select-none flex flex-col justify-between transition-shadow ${
-                tileColors[tile.tipo] || tileColors.custom
-              } ${isSelected ? 'ring-2 ring-primary ring-offset-1 ring-offset-background shadow-lg shadow-primary/20' : ''}
-              ${isDragging ? 'opacity-90' : 'hover:brightness-110'}`}
+              className={`rounded-lg overflow-hidden select-none transition-shadow ${
+                isSelected ? 'ring-2 ring-primary ring-offset-2 ring-offset-background shadow-lg shadow-primary/20' : ''
+              } ${isDragging ? 'opacity-80 scale-105' : 'hover:brightness-110'}`}
             >
-              <div className="p-2 flex items-start justify-between h-full">
-                <div className="flex flex-col justify-between h-full min-w-0 flex-1">
-                  <span
-                    className="font-bold truncate leading-tight"
-                    style={{ fontSize: Math.max(9, 12 * zoom) }}
-                  >
-                    {tile.nome}
-                  </span>
-                  {h * zoom > 60 && (
-                    <span
-                      className="opacity-50 capitalize"
-                      style={{ fontSize: Math.max(8, 10 * zoom) }}
-                    >
-                      {tile.tipo.replace('_', ' ')}
-                    </span>
-                  )}
+              {tile.imagem_url ? (
+                <img
+                  src={tile.imagem_url}
+                  alt={tile.nome}
+                  className="w-full h-full object-cover pointer-events-none"
+                  draggable={false}
+                />
+              ) : (
+                <div className={`w-full h-full flex items-center justify-center border-2 rounded-lg ${tileColors[tile.tipo] || tileColors.custom}`}>
+                  <span className="font-bold text-xs">{tile.nome}</span>
                 </div>
-                <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${statusDot[tile.status]}`} style={{ minWidth: Math.max(6, 8 * zoom) , minHeight: Math.max(6, 8 * zoom) }} />
+              )}
+              {/* Label overlay */}
+              <div className="absolute bottom-0 left-0 right-0 bg-background/80 backdrop-blur-sm px-1.5 py-0.5 flex items-center justify-between"
+                style={{ fontSize: Math.max(8, 10 * zoom) }}
+              >
+                <span className="font-semibold text-foreground truncate">{tile.nome}</span>
+                <span className={`w-2 h-2 rounded-full shrink-0 ml-1 ${statusDot[tile.status]}`} />
               </div>
             </div>
           );
