@@ -120,8 +120,32 @@ export default function Index() {
               <BigNumberCard title="Giro Médio" value="2.3" icon={RotateCcw} subtitle="cirurgias/sala" />
               <BigNumberCard title="Tempo Médio" value="42min" icon={Timer} subtitle="por etapa" />
             </div>
-            <MiniCharts />
-            <AlertsList alerts={mockAlerts} />
+
+            {/* Hospital Virtual Preview */}
+            <div className="glass rounded-xl border border-border overflow-hidden">
+              <div className="flex items-center justify-between px-4 py-2 border-b border-border">
+                <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Mapa do Hospital — {layout.nome}</h3>
+                <button
+                  onClick={() => setActiveTab('hospital')}
+                  className="text-[10px] text-primary hover:underline font-medium"
+                >
+                  Editar no Hospital Virtual →
+                </button>
+              </div>
+              <div style={{ height: 320 }}>
+                <TileCanvasGrid
+                  layout={layout}
+                  onUpdateLayout={setLayout}
+                  selectedTileId={null}
+                  onSelectTile={() => {}}
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <MiniCharts />
+              <AlertsList alerts={mockAlerts} />
+            </div>
           </div>
         )}
 
@@ -173,12 +197,14 @@ export default function Index() {
                   <Button variant="outline" size="sm" className="h-7 text-xs"><Upload size={12} className="mr-1" />Importar</Button>
                 </div>
               </div>
-              <TileCanvasGrid
-                layout={layout}
-                onUpdateLayout={setLayout}
-                selectedTileId={selectedTileId}
-                onSelectTile={setSelectedTileId}
-              />
+              <div style={{ height: 'calc(100vh - 220px)' }}>
+                <TileCanvasGrid
+                  layout={layout}
+                  onUpdateLayout={setLayout}
+                  selectedTileId={selectedTileId}
+                  onSelectTile={setSelectedTileId}
+                />
+              </div>
             </div>
             {selectedTile && (
               <div className="w-64 shrink-0">
