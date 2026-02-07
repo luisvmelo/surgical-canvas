@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { TileData, HospitalLayout } from '@/data/types';
 import { motion } from 'framer-motion';
-import { ZoomIn, ZoomOut, Maximize, Grid3X3 } from 'lucide-react';
+import { ZoomIn, ZoomOut, Maximize, Grid3X3, X } from 'lucide-react';
 
 const tileColors: Record<string, string> = {
   sala_cirurgica: 'bg-primary/20 border-primary/40 text-primary',
@@ -241,10 +241,23 @@ export default function TileCanvasGrid({ layout, onUpdateLayout, selectedTileId,
                 zIndex: isDragging ? 100 : isSelected ? 50 : 1,
                 transition: isDragging ? 'none' : 'box-shadow 0.2s',
               }}
-              className={`rounded-lg overflow-hidden select-none transition-shadow ${
+              className={`rounded-lg overflow-hidden select-none transition-shadow group/tile ${
                 isSelected ? 'ring-2 ring-primary ring-offset-2 ring-offset-background shadow-lg shadow-primary/20' : ''
               } ${isDragging ? 'opacity-80 scale-105' : 'hover:brightness-110'}`}
             >
+              {/* Delete button */}
+              <button
+                onMouseDown={(e) => e.stopPropagation()}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onUpdateLayout({ ...layout, tiles: layout.tiles.filter(t => t.id !== tile.id) });
+                  if (selectedTileId === tile.id) onSelectTile(null);
+                }}
+                className="absolute top-1 right-1 z-10 w-5 h-5 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center opacity-0 group-hover/tile:opacity-100 transition-opacity hover:scale-110"
+                style={{ fontSize: Math.max(8, 10 * zoom) }}
+              >
+                <X size={12} />
+              </button>
               {tile.imagem_url ? (
                 <img
                   src={tile.imagem_url}
