@@ -3,6 +3,7 @@ import { ImageCrop } from '@/data/types';
 import { Crop, Check } from 'lucide-react';
 
 interface CropOverlayProps {
+  /** tileWidth/tileHeight are in screen pixels (already zoomed) */
   imageUrl: string;
   crop: ImageCrop;
   tileWidth: number;
@@ -43,8 +44,9 @@ export default function CropOverlay({ imageUrl, crop, tileWidth, tileHeight, zoo
     if (!drag) return;
 
     const handleMove = (e: MouseEvent) => {
-      const dx = (e.clientX - drag.startX) / (imgW * zoom);
-      const dy = (e.clientY - drag.startY) / (imgH * zoom);
+      // imgW/imgH are already in screen pixels, no need to multiply by zoom again
+      const dx = (e.clientX - drag.startX) / imgW;
+      const dy = (e.clientY - drag.startY) / imgH;
       const s = drag.startCrop;
 
       let newCrop = { ...s };
