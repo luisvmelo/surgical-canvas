@@ -132,12 +132,13 @@ export default function Index() {
                   Editar no Hospital Virtual →
                 </button>
               </div>
-              <div style={{ height: 320 }}>
+              <div style={{ height: 600 }}>
                 <TileCanvasGrid
                   layout={layout}
                   onUpdateLayout={setLayout}
                   selectedTileId={null}
                   onSelectTile={() => {}}
+                  readOnly
                 />
               </div>
             </div>
