@@ -28,11 +28,12 @@ interface TileCanvasGridProps {
   onUpdateLayout: (layout: HospitalLayout) => void;
   selectedTileId: string | null;
   onSelectTile: (id: string | null) => void;
+  readOnly?: boolean;
 }
 
 const TILE_UNIT = 80; // base size for 1 unit
 
-export default function TileCanvasGrid({ layout, onUpdateLayout, selectedTileId, onSelectTile }: TileCanvasGridProps) {
+export default function TileCanvasGrid({ layout, onUpdateLayout, selectedTileId, onSelectTile, readOnly = false }: TileCanvasGridProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 40, y: 40 });
@@ -122,6 +123,7 @@ export default function TileCanvasGrid({ layout, onUpdateLayout, selectedTileId,
 
   const handleTileMouseDown = useCallback((e: React.MouseEvent, tile: TileData) => {
     e.stopPropagation();
+    if (readOnly) return;
     const pos = screenToCanvas(e.clientX, e.clientY);
     setDragTile({
       id: tile.id,
@@ -129,11 +131,12 @@ export default function TileCanvasGrid({ layout, onUpdateLayout, selectedTileId,
       offsetY: pos.y - tile.posicao.y,
     });
     onSelectTile(tile.id);
-  }, [screenToCanvas, onSelectTile]);
+  }, [screenToCanvas, onSelectTile, readOnly]);
 
   // Drop from library
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
+    if (readOnly) return;
     const newTileType = e.dataTransfer.getData('new-tile-type');
     if (!newTileType) return;
 
@@ -246,6 +249,7 @@ export default function TileCanvasGrid({ layout, onUpdateLayout, selectedTileId,
               } ${isDragging ? 'opacity-80 scale-105' : 'hover:brightness-110'}`}
             >
               {/* Delete button */}
+              {!readOnly && (
               <button
                 onMouseDown={(e) => e.stopPropagation()}
                 onClick={(e) => {
@@ -258,6 +262,7 @@ export default function TileCanvasGrid({ layout, onUpdateLayout, selectedTileId,
               >
                 <X size={12} />
               </button>
+              )}
               {tile.imagem_url ? (
                 <img
                   src={tile.imagem_url}
