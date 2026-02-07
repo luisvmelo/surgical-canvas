@@ -1,8 +1,7 @@
-import { useState, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { TileData, HospitalLayout } from '@/data/types';
 import { motion } from 'framer-motion';
-
-const CELL_SIZE = 60;
+import { ZoomIn, ZoomOut, Maximize, Grid3X3 } from 'lucide-react';
 
 const tileColors: Record<string, string> = {
   sala_cirurgica: 'bg-primary/20 border-primary/40 text-primary',
@@ -31,98 +30,268 @@ interface TileCanvasGridProps {
   onSelectTile: (id: string | null) => void;
 }
 
+const TILE_UNIT = 80; // base size for 1 unit
+
 export default function TileCanvasGrid({ layout, onUpdateLayout, selectedTileId, onSelectTile }: TileCanvasGridProps) {
-  const [dragOffset, setDragOffset] = useState<{ id: string; dx: number; dy: number } | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [zoom, setZoom] = useState(1);
+  const [pan, setPan] = useState({ x: 40, y: 40 });
+  const [isPanning, setIsPanning] = useState(false);
+  const [panStart, setPanStart] = useState({ x: 0, y: 0 });
+  const [dragTile, setDragTile] = useState<{ id: string; offsetX: number; offsetY: number } | null>(null);
+  const [snapToGrid, setSnapToGrid] = useState(false);
 
-  const handleDragOver = useCallback((e: React.DragEvent) => {
+  const SNAP = 20;
+
+  const screenToCanvas = useCallback((clientX: number, clientY: number) => {
+    const rect = containerRef.current?.getBoundingClientRect();
+    if (!rect) return { x: 0, y: 0 };
+    return {
+      x: (clientX - rect.left - pan.x) / zoom,
+      y: (clientY - rect.top - pan.y) / zoom,
+    };
+  }, [pan, zoom]);
+
+  // Zoom with wheel
+  const handleWheel = useCallback((e: React.WheelEvent) => {
     e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
-  }, []);
+    const rect = containerRef.current?.getBoundingClientRect();
+    if (!rect) return;
 
-  const handleDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    const tileId = e.dataTransfer.getData('tile-id');
-    const newTileType = e.dataTransfer.getData('new-tile-type');
-    const rect = e.currentTarget.getBoundingClientRect();
-    const x = Math.floor((e.clientX - rect.left) / CELL_SIZE);
-    const y = Math.floor((e.clientY - rect.top) / CELL_SIZE);
+    const mouseX = e.clientX - rect.left;
+    const mouseY = e.clientY - rect.top;
 
-    if (newTileType) {
-      const newTile: TileData = {
-        id: `T${Date.now()}`,
-        nome: e.dataTransfer.getData('new-tile-nome') || 'Novo Tile',
-        tipo: newTileType as TileData['tipo'],
-        capacidade: 0,
-        status: 'ativo',
-        propriedades: {},
-        posicao: { x, y },
-        tamanho: { w: 2, h: 1 },
-        rotacao: 0,
-        layer: 'salas',
-        tags: [],
-        notas: '',
-      };
-      onUpdateLayout({ ...layout, tiles: [...layout.tiles, newTile] });
-      onSelectTile(newTile.id);
+    const delta = e.deltaY > 0 ? 0.9 : 1.1;
+    const newZoom = Math.min(3, Math.max(0.15, zoom * delta));
+    const ratio = newZoom / zoom;
+
+    setPan(prev => ({
+      x: mouseX - (mouseX - prev.x) * ratio,
+      y: mouseY - (mouseY - prev.y) * ratio,
+    }));
+    setZoom(newZoom);
+  }, [zoom]);
+
+  // Pan: middle-click or space
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    // Middle click or if clicking on empty canvas area
+    if (e.button === 1) {
+      e.preventDefault();
+      setIsPanning(true);
+      setPanStart({ x: e.clientX - pan.x, y: e.clientY - pan.y });
       return;
     }
 
-    if (tileId) {
-      const updated = layout.tiles.map(t =>
-        t.id === tileId ? { ...t, posicao: { x: Math.max(0, x), y: Math.max(0, y) } } : t
-      );
-      onUpdateLayout({ ...layout, tiles: updated });
+    // Left click on background = pan
+    if (e.target === e.currentTarget || (e.target as HTMLElement).dataset.canvasBg === 'true') {
+      setIsPanning(true);
+      setPanStart({ x: e.clientX - pan.x, y: e.clientY - pan.y });
+      onSelectTile(null);
     }
-  }, [layout, onUpdateLayout, onSelectTile]);
+  }, [pan, onSelectTile]);
 
-  const handleTileDragStart = (e: React.DragEvent, tile: TileData) => {
-    e.dataTransfer.setData('tile-id', tile.id);
-    e.dataTransfer.effectAllowed = 'move';
-  };
+  const handleMouseMove = useCallback((e: React.MouseEvent) => {
+    if (isPanning) {
+      setPan({ x: e.clientX - panStart.x, y: e.clientY - panStart.y });
+      return;
+    }
 
-  const maxX = Math.max(...layout.tiles.map(t => t.posicao.x + t.tamanho.w), 10);
-  const maxY = Math.max(...layout.tiles.map(t => t.posicao.y + t.tamanho.h), 8);
+    if (dragTile) {
+      const pos = screenToCanvas(e.clientX, e.clientY);
+      let x = pos.x - dragTile.offsetX;
+      let y = pos.y - dragTile.offsetY;
+
+      if (snapToGrid) {
+        x = Math.round(x / SNAP) * SNAP;
+        y = Math.round(y / SNAP) * SNAP;
+      }
+
+      onUpdateLayout({
+        ...layout,
+        tiles: layout.tiles.map(t =>
+          t.id === dragTile.id ? { ...t, posicao: { x: Math.round(x), y: Math.round(y) } } : t
+        ),
+      });
+    }
+  }, [isPanning, panStart, dragTile, screenToCanvas, snapToGrid, layout, onUpdateLayout]);
+
+  const handleMouseUp = useCallback(() => {
+    setIsPanning(false);
+    setDragTile(null);
+  }, []);
+
+  const handleTileMouseDown = useCallback((e: React.MouseEvent, tile: TileData) => {
+    e.stopPropagation();
+    const pos = screenToCanvas(e.clientX, e.clientY);
+    setDragTile({
+      id: tile.id,
+      offsetX: pos.x - tile.posicao.x,
+      offsetY: pos.y - tile.posicao.y,
+    });
+    onSelectTile(tile.id);
+  }, [screenToCanvas, onSelectTile]);
+
+  // Drop from library
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    const newTileType = e.dataTransfer.getData('new-tile-type');
+    if (!newTileType) return;
+
+    const pos = screenToCanvas(e.clientX, e.clientY);
+    const newTile: TileData = {
+      id: `T${Date.now()}`,
+      nome: e.dataTransfer.getData('new-tile-nome') || 'Novo Tile',
+      tipo: newTileType as TileData['tipo'],
+      capacidade: 0,
+      status: 'ativo',
+      propriedades: {},
+      posicao: { x: Math.round(pos.x), y: Math.round(pos.y) },
+      tamanho: { w: 2, h: 2 },
+      rotacao: 0,
+      layer: 'salas',
+      tags: [],
+      notas: '',
+    };
+    onUpdateLayout({ ...layout, tiles: [...layout.tiles, newTile] });
+    onSelectTile(newTile.id);
+  }, [screenToCanvas, layout, onUpdateLayout, onSelectTile]);
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'copy';
+  }, []);
+
+  const zoomIn = () => setZoom(z => Math.min(3, z * 1.25));
+  const zoomOut = () => setZoom(z => Math.max(0.15, z * 0.8));
+  const resetView = () => { setZoom(1); setPan({ x: 40, y: 40 }); };
+
+  // Grid pattern size in canvas space
+  const gridSize = SNAP * zoom;
 
   return (
-    <div className="relative overflow-auto scrollbar-thin rounded-xl border border-border bg-background">
+    <div className="relative rounded-xl border border-border overflow-hidden bg-background" style={{ height: 'calc(100vh - 200px)' }}>
+      {/* Canvas */}
       <div
-        className="relative tile-grid-bg"
-        style={{ width: maxX * CELL_SIZE + 120, height: maxY * CELL_SIZE + 120, minWidth: '100%', minHeight: 400 }}
-        onDragOver={handleDragOver}
+        ref={containerRef}
+        className={`w-full h-full ${isPanning ? 'cursor-grabbing' : dragTile ? 'cursor-grabbing' : 'cursor-grab'}`}
+        onWheel={handleWheel}
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUp}
+        onMouseLeave={handleMouseUp}
         onDrop={handleDrop}
-        onClick={(e) => {
-          if (e.target === e.currentTarget) onSelectTile(null);
-        }}
+        onDragOver={handleDragOver}
+        style={{ overflow: 'hidden' }}
       >
-        {layout.tiles.map(tile => (
-          <motion.div
-            key={tile.id}
-            draggable
-            onDragStart={(e: any) => handleTileDragStart(e, tile)}
-            onClick={(e) => { e.stopPropagation(); onSelectTile(tile.id); }}
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            style={{
-              position: 'absolute',
-              left: tile.posicao.x * CELL_SIZE,
-              top: tile.posicao.y * CELL_SIZE,
-              width: tile.tamanho.w * CELL_SIZE - 4,
-              height: tile.tamanho.h * CELL_SIZE - 4,
-              transform: `rotate(${tile.rotacao}deg)`,
-            }}
-            className={`rounded-lg border-2 cursor-grab active:cursor-grabbing p-2 flex flex-col justify-between transition-all ${
-              tileColors[tile.tipo] || tileColors.custom
-            } ${selectedTileId === tile.id ? 'ring-2 ring-primary ring-offset-1 ring-offset-background' : ''}`}
-          >
-            <div className="flex items-start justify-between">
-              <span className="text-[10px] font-bold truncate leading-tight">{tile.nome}</span>
-              <span className={`w-2 h-2 rounded-full shrink-0 ${statusDot[tile.status]}`} />
+        {/* Grid background */}
+        <div
+          data-canvas-bg="true"
+          className="absolute inset-0"
+          style={{
+            backgroundImage: snapToGrid
+              ? `radial-gradient(circle, hsl(var(--border) / 0.5) 1px, transparent 1px)`
+              : `radial-gradient(circle, hsl(var(--border) / 0.2) 0.5px, transparent 0.5px)`,
+            backgroundSize: `${gridSize}px ${gridSize}px`,
+            backgroundPosition: `${pan.x % gridSize}px ${pan.y % gridSize}px`,
+          }}
+        />
+
+        {/* Origin crosshair */}
+        <div
+          className="absolute pointer-events-none"
+          style={{
+            left: pan.x,
+            top: pan.y - 20,
+            width: 1,
+            height: 40,
+            background: 'hsl(var(--border) / 0.3)',
+          }}
+        />
+        <div
+          className="absolute pointer-events-none"
+          style={{
+            left: pan.x - 20,
+            top: pan.y,
+            width: 40,
+            height: 1,
+            background: 'hsl(var(--border) / 0.3)',
+          }}
+        />
+
+        {/* Tiles */}
+        {layout.tiles.map(tile => {
+          const isSelected = selectedTileId === tile.id;
+          const isDragging = dragTile?.id === tile.id;
+          const w = tile.tamanho.w * TILE_UNIT;
+          const h = tile.tamanho.h * TILE_UNIT;
+
+          return (
+            <div
+              key={tile.id}
+              onMouseDown={(e) => handleTileMouseDown(e, tile)}
+              style={{
+                position: 'absolute',
+                left: pan.x + tile.posicao.x * zoom,
+                top: pan.y + tile.posicao.y * zoom,
+                width: w * zoom,
+                height: h * zoom,
+                transform: `rotate(${tile.rotacao}deg)`,
+                zIndex: isDragging ? 100 : isSelected ? 50 : 1,
+                transition: isDragging ? 'none' : 'box-shadow 0.2s',
+              }}
+              className={`rounded-lg border-2 select-none flex flex-col justify-between transition-shadow ${
+                tileColors[tile.tipo] || tileColors.custom
+              } ${isSelected ? 'ring-2 ring-primary ring-offset-1 ring-offset-background shadow-lg shadow-primary/20' : ''}
+              ${isDragging ? 'opacity-90' : 'hover:brightness-110'}`}
+            >
+              <div className="p-2 flex items-start justify-between h-full">
+                <div className="flex flex-col justify-between h-full min-w-0 flex-1">
+                  <span
+                    className="font-bold truncate leading-tight"
+                    style={{ fontSize: Math.max(9, 12 * zoom) }}
+                  >
+                    {tile.nome}
+                  </span>
+                  {h * zoom > 60 && (
+                    <span
+                      className="opacity-50 capitalize"
+                      style={{ fontSize: Math.max(8, 10 * zoom) }}
+                    >
+                      {tile.tipo.replace('_', ' ')}
+                    </span>
+                  )}
+                </div>
+                <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${statusDot[tile.status]}`} style={{ minWidth: Math.max(6, 8 * zoom) , minHeight: Math.max(6, 8 * zoom) }} />
+              </div>
             </div>
-            {tile.tamanho.h > 1 && (
-              <span className="text-[9px] opacity-60 capitalize">{tile.tipo.replace('_', ' ')}</span>
-            )}
-          </motion.div>
-        ))}
+          );
+        })}
+      </div>
+
+      {/* Zoom controls */}
+      <div className="absolute bottom-4 right-4 flex items-center gap-1 glass rounded-lg border border-border p-1">
+        <button onClick={zoomOut} className="p-1.5 rounded hover:bg-secondary transition-colors text-muted-foreground hover:text-foreground">
+          <ZoomOut size={14} />
+        </button>
+        <span className="text-[10px] font-mono text-muted-foreground w-10 text-center">{Math.round(zoom * 100)}%</span>
+        <button onClick={zoomIn} className="p-1.5 rounded hover:bg-secondary transition-colors text-muted-foreground hover:text-foreground">
+          <ZoomIn size={14} />
+        </button>
+        <div className="w-px h-4 bg-border mx-0.5" />
+        <button onClick={resetView} className="p-1.5 rounded hover:bg-secondary transition-colors text-muted-foreground hover:text-foreground">
+          <Maximize size={14} />
+        </button>
+        <button
+          onClick={() => setSnapToGrid(!snapToGrid)}
+          className={`p-1.5 rounded transition-colors ${snapToGrid ? 'bg-primary/20 text-primary' : 'text-muted-foreground hover:text-foreground hover:bg-secondary'}`}
+        >
+          <Grid3X3 size={14} />
+        </button>
+      </div>
+
+      {/* Info */}
+      <div className="absolute top-4 left-4 text-[10px] text-muted-foreground glass rounded-md px-2 py-1 border border-border">
+        Arraste o fundo para mover · Scroll para zoom · {snapToGrid ? 'Snap ativo' : 'Posição livre'}
       </div>
     </div>
   );

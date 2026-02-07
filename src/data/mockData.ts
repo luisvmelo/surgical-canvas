@@ -74,15 +74,15 @@ export const mockAlerts: Alert[] = [
 
 const defaultTiles: TileData[] = [
   { id: 'T01', nome: 'Sala Cirúrgica 1', tipo: 'sala_cirurgica', capacidade: 1, status: 'ocupado', propriedades: {}, posicao: { x: 0, y: 0 }, tamanho: { w: 2, h: 2 }, rotacao: 0, layer: 'salas', tags: ['principal'], notas: '' },
-  { id: 'T02', nome: 'Sala Cirúrgica 2', tipo: 'sala_cirurgica', capacidade: 1, status: 'ocupado', propriedades: {}, posicao: { x: 2, y: 0 }, tamanho: { w: 2, h: 2 }, rotacao: 0, layer: 'salas', tags: [], notas: '' },
-  { id: 'T03', nome: 'Sala Cirúrgica 3', tipo: 'sala_cirurgica', capacidade: 1, status: 'manutencao', propriedades: {}, posicao: { x: 4, y: 0 }, tamanho: { w: 2, h: 2 }, rotacao: 0, layer: 'salas', tags: [], notas: 'Em manutenção preventiva' },
-  { id: 'T04', nome: 'UTI', tipo: 'uti', capacidade: 12, status: 'ativo', propriedades: { leitos_ocupados: 11 }, posicao: { x: 0, y: 3 }, tamanho: { w: 3, h: 2 }, rotacao: 0, layer: 'salas', tags: ['crítico'], notas: '' },
-  { id: 'T05', nome: 'Recuperação', tipo: 'recuperacao', capacidade: 8, status: 'ativo', propriedades: {}, posicao: { x: 3, y: 3 }, tamanho: { w: 3, h: 2 }, rotacao: 0, layer: 'salas', tags: [], notas: '' },
-  { id: 'T06', nome: 'Recepção CC', tipo: 'recepcao', capacidade: 0, status: 'ativo', propriedades: {}, posicao: { x: 0, y: 6 }, tamanho: { w: 2, h: 1 }, rotacao: 0, layer: 'estrutura', tags: [], notas: '' },
-  { id: 'T07', nome: 'CME', tipo: 'cme', capacidade: 0, status: 'ativo', propriedades: {}, posicao: { x: 6, y: 0 }, tamanho: { w: 2, h: 2 }, rotacao: 0, layer: 'estrutura', tags: [], notas: '' },
-  { id: 'T08', nome: 'Corredor Principal', tipo: 'corredor', capacidade: 0, status: 'ativo', propriedades: {}, posicao: { x: 0, y: 2 }, tamanho: { w: 8, h: 1 }, rotacao: 0, layer: 'estrutura', tags: [], notas: '' },
-  { id: 'T09', nome: 'Almoxarifado', tipo: 'almoxarifado', capacidade: 0, status: 'ativo', propriedades: {}, posicao: { x: 6, y: 3 }, tamanho: { w: 2, h: 2 }, rotacao: 0, layer: 'estrutura', tags: [], notas: '' },
-  { id: 'T10', nome: 'Sala Cirúrgica 4', tipo: 'sala_cirurgica', capacidade: 1, status: 'ocupado', propriedades: {}, posicao: { x: 2, y: 6 }, tamanho: { w: 2, h: 1 }, rotacao: 0, layer: 'salas', tags: ['cardíaca'], notas: '' },
+  { id: 'T02', nome: 'Sala Cirúrgica 2', tipo: 'sala_cirurgica', capacidade: 1, status: 'ocupado', propriedades: {}, posicao: { x: 180, y: 0 }, tamanho: { w: 2, h: 2 }, rotacao: 0, layer: 'salas', tags: [], notas: '' },
+  { id: 'T03', nome: 'Sala Cirúrgica 3', tipo: 'sala_cirurgica', capacidade: 1, status: 'manutencao', propriedades: {}, posicao: { x: 360, y: 0 }, tamanho: { w: 2, h: 2 }, rotacao: 0, layer: 'salas', tags: [], notas: 'Em manutenção preventiva' },
+  { id: 'T04', nome: 'UTI', tipo: 'uti', capacidade: 12, status: 'ativo', propriedades: { leitos_ocupados: 11 }, posicao: { x: 0, y: 260 }, tamanho: { w: 3, h: 2 }, rotacao: 0, layer: 'salas', tags: ['crítico'], notas: '' },
+  { id: 'T05', nome: 'Recuperação', tipo: 'recuperacao', capacidade: 8, status: 'ativo', propriedades: {}, posicao: { x: 260, y: 260 }, tamanho: { w: 3, h: 2 }, rotacao: 0, layer: 'salas', tags: [], notas: '' },
+  { id: 'T06', nome: 'Recepção CC', tipo: 'recepcao', capacidade: 0, status: 'ativo', propriedades: {}, posicao: { x: 0, y: 480 }, tamanho: { w: 2, h: 1 }, rotacao: 0, layer: 'estrutura', tags: [], notas: '' },
+  { id: 'T07', nome: 'CME', tipo: 'cme', capacidade: 0, status: 'ativo', propriedades: {}, posicao: { x: 540, y: 0 }, tamanho: { w: 2, h: 2 }, rotacao: 0, layer: 'estrutura', tags: [], notas: '' },
+  { id: 'T08', nome: 'Corredor Principal', tipo: 'corredor', capacidade: 0, status: 'ativo', propriedades: {}, posicao: { x: 0, y: 170 }, tamanho: { w: 8, h: 1 }, rotacao: 0, layer: 'estrutura', tags: [], notas: '' },
+  { id: 'T09', nome: 'Almoxarifado', tipo: 'almoxarifado', capacidade: 0, status: 'ativo', propriedades: {}, posicao: { x: 540, y: 260 }, tamanho: { w: 2, h: 2 }, rotacao: 0, layer: 'estrutura', tags: [], notas: '' },
+  { id: 'T10', nome: 'Sala Cirúrgica 4', tipo: 'sala_cirurgica', capacidade: 1, status: 'ocupado', propriedades: {}, posicao: { x: 180, y: 480 }, tamanho: { w: 2, h: 1 }, rotacao: 0, layer: 'salas', tags: ['cardíaca'], notas: '' },
 ];
 
 export const mockLayout: HospitalLayout = {
