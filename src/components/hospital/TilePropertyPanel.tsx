@@ -20,7 +20,7 @@ export default function TilePropertyPanel({ tile, layout, onUpdateLayout, onClos
     });
   };
 
-  const crop = tile.imageCrop || { objectFit: 'cover' as const, objectPosition: 'center center', scale: 1 };
+  const crop: ImageCrop = { objectFit: 'cover', objectPosition: 'center center', scale: 1, offsetX: 0, offsetY: 0, ...tile.imageCrop };
 
   const updateCrop = (updates: Partial<ImageCrop>) => {
     updateTile({ imageCrop: { ...crop, ...updates } });
