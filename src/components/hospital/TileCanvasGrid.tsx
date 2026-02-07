@@ -62,6 +62,32 @@ export default function TileCanvasGrid({ layout, onUpdateLayout, selectedTileId,
   const [snapToGrid, setSnapToGrid] = useState(false);
   const [cropMode, setCropMode] = useState<string | null>(null);
 
+  /** Apply crop: resize tile to match cropped area, then exit crop mode */
+  const applyCropAndExit = useCallback((tileId: string) => {
+    const tile = layout.tiles.find(t => t.id === tileId);
+    if (tile) {
+      const c = tile.imageCrop || DEFAULT_CROP;
+      if (c.x !== 0 || c.y !== 0 || c.w !== 1 || c.h !== 1) {
+        const newW = tile.tamanho.w * c.w;
+        const newH = tile.tamanho.h * c.h;
+        const newX = tile.posicao.x + tile.tamanho.w * TILE_UNIT * c.x;
+        const newY = tile.posicao.y + tile.tamanho.h * TILE_UNIT * c.y;
+        onUpdateLayout({
+          ...layout,
+          tiles: layout.tiles.map(t =>
+            t.id === tileId ? {
+              ...t,
+              tamanho: { w: Math.max(0.5, Math.round(newW * 4) / 4), h: Math.max(0.5, Math.round(newH * 4) / 4) },
+              posicao: { x: Math.round(newX), y: Math.round(newY) },
+              imageCrop: { x: c.x, y: c.y, w: c.w, h: c.h },
+            } : t
+          ),
+        });
+      }
+    }
+    setCropMode(null);
+  }, [layout, onUpdateLayout]);
+
   const SNAP = 20;
 
   const screenToCanvas = useCallback((clientX: number, clientY: number) => {
@@ -99,12 +125,12 @@ export default function TileCanvasGrid({ layout, onUpdateLayout, selectedTileId,
       return;
     }
     if (e.target === e.currentTarget || (e.target as HTMLElement).dataset.canvasBg === 'true') {
-      if (cropMode) { setCropMode(null); return; }
+      if (cropMode) { applyCropAndExit(cropMode); return; }
       setIsPanning(true);
       setPanStart({ x: e.clientX - pan.x, y: e.clientY - pan.y });
       onSelectTile(null);
     }
-  }, [pan, onSelectTile, cropMode]);
+  }, [pan, onSelectTile, cropMode, applyCropAndExit]);
 
   const handleMouseMove = useCallback((e: React.MouseEvent) => {
     if (isPanning) {
@@ -168,11 +194,11 @@ export default function TileCanvasGrid({ layout, onUpdateLayout, selectedTileId,
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && cropMode) setCropMode(null);
+      if (e.key === 'Escape' && cropMode) applyCropAndExit(cropMode);
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [cropMode]);
+  }, [cropMode, applyCropAndExit]);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -305,7 +331,7 @@ export default function TileCanvasGrid({ layout, onUpdateLayout, selectedTileId,
                         ),
                       });
                     }}
-                    onDone={() => setCropMode(null)}
+                    onDone={() => applyCropAndExit(tile.id)}
                   />
                 ) : (
                   <CroppedImage src={tile.imagem_url} crop={crop} alt={tile.nome} />
