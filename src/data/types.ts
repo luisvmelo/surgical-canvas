@@ -46,11 +46,11 @@ export interface Surgery {
 }
 
 export interface ImageCrop {
-  objectFit: 'cover' | 'contain' | 'fill';
-  objectPosition: string; // e.g. "center center", "top left", "30% 60%"
-  scale: number; // 1 = normal, >1 = zoomed in
-  offsetX: number; // px offset for drag-crop
-  offsetY: number;
+  /** Crop rect as fractions 0–1 of the image */
+  x: number;
+  y: number;
+  w: number;
+  h: number;
 }
 
 export interface TileData {

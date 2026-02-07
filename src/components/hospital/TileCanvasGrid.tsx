@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
-import { TileData, HospitalLayout } from '@/data/types';
-import { motion } from 'framer-motion';
-import { ZoomIn, ZoomOut, Maximize, Grid3X3, X, Crop } from 'lucide-react';
+import { TileData, HospitalLayout, ImageCrop } from '@/data/types';
+import { ZoomIn, ZoomOut, Maximize, Grid3X3, X } from 'lucide-react';
+import CropOverlay from './CropOverlay';
 
 const tileColors: Record<string, string> = {
   sala_cirurgica: 'bg-primary/20 border-primary/40 text-primary',
@@ -16,13 +16,6 @@ const tileColors: Record<string, string> = {
   custom: 'bg-primary/10 border-primary/30 text-primary',
 };
 
-const statusDot: Record<string, string> = {
-  ativo: 'bg-success',
-  ocupado: 'bg-warning',
-  manutencao: 'bg-destructive',
-  livre: 'bg-primary',
-};
-
 interface TileCanvasGridProps {
   layout: HospitalLayout;
   onUpdateLayout: (layout: HospitalLayout) => void;
@@ -31,7 +24,32 @@ interface TileCanvasGridProps {
   readOnly?: boolean;
 }
 
-const TILE_UNIT = 80; // base size for 1 unit
+const TILE_UNIT = 80;
+const DEFAULT_CROP: ImageCrop = { x: 0, y: 0, w: 1, h: 1 };
+
+/** Render a cropped image: shows only the crop rect portion filling the tile */
+function CroppedImage({ src, crop, alt }: { src: string; crop: ImageCrop; alt: string }) {
+  // We scale the image so the crop rect fills the container
+  // Image width = 100% / crop.w, height = 100% / crop.h
+  // Position: -crop.x / crop.w * 100%, -crop.y / crop.h * 100%
+  return (
+    <div className="w-full h-full overflow-hidden relative">
+      <img
+        src={src}
+        alt={alt}
+        draggable={false}
+        className="absolute pointer-events-none"
+        style={{
+          width: `${100 / crop.w}%`,
+          height: `${100 / crop.h}%`,
+          left: `${-(crop.x / crop.w) * 100}%`,
+          top: `${-(crop.y / crop.h) * 100}%`,
+          objectFit: 'fill',
+        }}
+      />
+    </div>
+  );
+}
 
 export default function TileCanvasGrid({ layout, onUpdateLayout, selectedTileId, onSelectTile, readOnly = false }: TileCanvasGridProps) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -42,8 +60,7 @@ export default function TileCanvasGrid({ layout, onUpdateLayout, selectedTileId,
   const [dragTile, setDragTile] = useState<{ id: string; offsetX: number; offsetY: number } | null>(null);
   const [resizeTile, setResizeTile] = useState<{ id: string; startX: number; startY: number; startW: number; startH: number } | null>(null);
   const [snapToGrid, setSnapToGrid] = useState(false);
-  const [cropMode, setCropMode] = useState<string | null>(null); // tile id in crop mode
-  const [cropDrag, setCropDrag] = useState<{ startX: number; startY: number; startOX: number; startOY: number } | null>(null);
+  const [cropMode, setCropMode] = useState<string | null>(null);
 
   const SNAP = 20;
 
@@ -56,55 +73,31 @@ export default function TileCanvasGrid({ layout, onUpdateLayout, selectedTileId,
     };
   }, [pan, zoom]);
 
-  // Zoom with wheel
   const handleWheel = useCallback((e: React.WheelEvent) => {
     e.preventDefault();
-
-    // If in crop mode, zoom the image inside the tile
-    if (cropMode) {
-      const tile = layout.tiles.find(t => t.id === cropMode);
-      if (tile) {
-        const crop = tile.imageCrop || { objectFit: 'cover' as const, objectPosition: 'center center', scale: 1, offsetX: 0, offsetY: 0 };
-        const delta = e.deltaY > 0 ? -0.1 : 0.1;
-        const newScale = Math.min(5, Math.max(0.3, crop.scale + delta));
-        onUpdateLayout({
-          ...layout,
-          tiles: layout.tiles.map(t =>
-            t.id === cropMode ? { ...t, imageCrop: { ...crop, scale: newScale } } : t
-          ),
-        });
-      }
-      return;
-    }
+    if (cropMode) return; // no canvas zoom in crop mode
 
     const rect = containerRef.current?.getBoundingClientRect();
     if (!rect) return;
-
     const mouseX = e.clientX - rect.left;
     const mouseY = e.clientY - rect.top;
-
     const delta = e.deltaY > 0 ? 0.9 : 1.1;
     const newZoom = Math.min(3, Math.max(0.15, zoom * delta));
     const ratio = newZoom / zoom;
-
     setPan(prev => ({
       x: mouseX - (mouseX - prev.x) * ratio,
       y: mouseY - (mouseY - prev.y) * ratio,
     }));
     setZoom(newZoom);
-  }, [zoom, cropMode, layout, onUpdateLayout]);
+  }, [zoom, cropMode]);
 
-  // Pan: middle-click or space
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
-    // Middle click or if clicking on empty canvas area
     if (e.button === 1) {
       e.preventDefault();
       setIsPanning(true);
       setPanStart({ x: e.clientX - pan.x, y: e.clientY - pan.y });
       return;
     }
-
-    // Left click on background = pan + exit crop mode
     if (e.target === e.currentTarget || (e.target as HTMLElement).dataset.canvasBg === 'true') {
       if (cropMode) { setCropMode(null); return; }
       setIsPanning(true);
@@ -118,24 +111,6 @@ export default function TileCanvasGrid({ layout, onUpdateLayout, selectedTileId,
       setPan({ x: e.clientX - panStart.x, y: e.clientY - panStart.y });
       return;
     }
-
-    // Crop drag: move image inside tile
-    if (cropDrag && cropMode) {
-      const dx = (e.clientX - cropDrag.startX) / zoom;
-      const dy = (e.clientY - cropDrag.startY) / zoom;
-      const tile = layout.tiles.find(t => t.id === cropMode);
-      if (tile) {
-        const crop = tile.imageCrop || { objectFit: 'cover' as const, objectPosition: 'center center', scale: 1, offsetX: 0, offsetY: 0 };
-        onUpdateLayout({
-          ...layout,
-          tiles: layout.tiles.map(t =>
-            t.id === cropMode ? { ...t, imageCrop: { ...crop, offsetX: cropDrag.startOX + dx, offsetY: cropDrag.startOY + dy } } : t
-          ),
-        });
-      }
-      return;
-    }
-
     if (resizeTile) {
       const dx = (e.clientX - resizeTile.startX) / zoom;
       const dy = (e.clientY - resizeTile.startY) / zoom;
@@ -149,17 +124,14 @@ export default function TileCanvasGrid({ layout, onUpdateLayout, selectedTileId,
       });
       return;
     }
-
     if (dragTile) {
       const pos = screenToCanvas(e.clientX, e.clientY);
       let x = pos.x - dragTile.offsetX;
       let y = pos.y - dragTile.offsetY;
-
       if (snapToGrid) {
         x = Math.round(x / SNAP) * SNAP;
         y = Math.round(y / SNAP) * SNAP;
       }
-
       onUpdateLayout({
         ...layout,
         tiles: layout.tiles.map(t =>
@@ -167,26 +139,17 @@ export default function TileCanvasGrid({ layout, onUpdateLayout, selectedTileId,
         ),
       });
     }
-  }, [isPanning, panStart, dragTile, resizeTile, cropDrag, cropMode, screenToCanvas, snapToGrid, layout, onUpdateLayout, zoom]);
+  }, [isPanning, panStart, dragTile, resizeTile, screenToCanvas, snapToGrid, layout, onUpdateLayout, zoom]);
 
   const handleMouseUp = useCallback(() => {
     setIsPanning(false);
     setDragTile(null);
     setResizeTile(null);
-    setCropDrag(null);
   }, []);
 
   const handleTileMouseDown = useCallback((e: React.MouseEvent, tile: TileData) => {
     e.stopPropagation();
-    if (readOnly) return;
-
-    // If in crop mode for this tile, start crop drag
-    if (cropMode === tile.id && tile.imagem_url) {
-      const crop = tile.imageCrop || { objectFit: 'cover' as const, objectPosition: 'center center', scale: 1, offsetX: 0, offsetY: 0 };
-      setCropDrag({ startX: e.clientX, startY: e.clientY, startOX: crop.offsetX, startOY: crop.offsetY });
-      return;
-    }
-
+    if (readOnly || cropMode) return;
     const pos = screenToCanvas(e.clientX, e.clientY);
     setDragTile({
       id: tile.id,
@@ -194,7 +157,6 @@ export default function TileCanvasGrid({ layout, onUpdateLayout, selectedTileId,
       offsetY: pos.y - tile.posicao.y,
     });
     onSelectTile(tile.id);
-    if (cropMode) setCropMode(null);
   }, [screenToCanvas, onSelectTile, readOnly, cropMode]);
 
   const handleTileDoubleClick = useCallback((e: React.MouseEvent, tile: TileData) => {
@@ -204,7 +166,6 @@ export default function TileCanvasGrid({ layout, onUpdateLayout, selectedTileId,
     onSelectTile(tile.id);
   }, [readOnly, onSelectTile]);
 
-  // Escape to exit crop mode
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && cropMode) setCropMode(null);
@@ -218,7 +179,6 @@ export default function TileCanvasGrid({ layout, onUpdateLayout, selectedTileId,
     if (readOnly) return;
     const newTileType = e.dataTransfer.getData('new-tile-type');
     if (!newTileType) return;
-
     const pos = screenToCanvas(e.clientX, e.clientY);
     const imageUrl = e.dataTransfer.getData('new-tile-image');
     const newTile: TileData = {
@@ -249,12 +209,10 @@ export default function TileCanvasGrid({ layout, onUpdateLayout, selectedTileId,
   const zoomOut = () => setZoom(z => Math.max(0.15, z * 0.8));
   const resetView = () => { setZoom(1); setPan({ x: 40, y: 40 }); };
 
-  // Grid pattern size in canvas space
   const gridSize = SNAP * zoom;
 
   return (
     <div className="relative rounded-xl border-0 overflow-hidden bg-background" style={{ height: '100%', minHeight: 300 }}>
-      {/* Canvas */}
       <div
         ref={containerRef}
         className={`w-full h-full ${isPanning ? 'cursor-grabbing' : dragTile ? 'cursor-grabbing' : 'cursor-grab'}`}
@@ -281,26 +239,8 @@ export default function TileCanvasGrid({ layout, onUpdateLayout, selectedTileId,
         />
 
         {/* Origin crosshair */}
-        <div
-          className="absolute pointer-events-none"
-          style={{
-            left: pan.x,
-            top: pan.y - 20,
-            width: 1,
-            height: 40,
-            background: 'hsl(var(--border) / 0.3)',
-          }}
-        />
-        <div
-          className="absolute pointer-events-none"
-          style={{
-            left: pan.x - 20,
-            top: pan.y,
-            width: 40,
-            height: 1,
-            background: 'hsl(var(--border) / 0.3)',
-          }}
-        />
+        <div className="absolute pointer-events-none" style={{ left: pan.x, top: pan.y - 20, width: 1, height: 40, background: 'hsl(var(--border) / 0.3)' }} />
+        <div className="absolute pointer-events-none" style={{ left: pan.x - 20, top: pan.y, width: 40, height: 1, background: 'hsl(var(--border) / 0.3)' }} />
 
         {/* Tiles */}
         {layout.tiles.map(tile => {
@@ -309,7 +249,7 @@ export default function TileCanvasGrid({ layout, onUpdateLayout, selectedTileId,
           const isCropping = cropMode === tile.id;
           const w = tile.tamanho.w * TILE_UNIT;
           const h = tile.tamanho.h * TILE_UNIT;
-          const crop = tile.imageCrop || { objectFit: 'cover' as const, objectPosition: 'center center', scale: 1, offsetX: 0, offsetY: 0 };
+          const crop = tile.imageCrop || DEFAULT_CROP;
 
           return (
             <div
@@ -328,50 +268,55 @@ export default function TileCanvasGrid({ layout, onUpdateLayout, selectedTileId,
               }}
               className={`rounded-lg overflow-hidden select-none transition-shadow group/tile ${
                 isCropping
-                  ? 'ring-2 ring-warning ring-offset-2 ring-offset-background shadow-lg shadow-warning/30 cursor-move'
+                  ? 'ring-2 ring-warning ring-offset-2 ring-offset-background shadow-lg shadow-warning/30'
                   : isSelected
                     ? 'ring-2 ring-primary ring-offset-2 ring-offset-background shadow-lg shadow-primary/20'
                     : ''
               } ${isDragging ? 'opacity-80 scale-105' : !isCropping ? 'hover:brightness-110' : ''}`}
             >
-              {/* Delete button - hide in crop mode */}
+              {/* Delete button */}
               {!readOnly && !isCropping && (
-              <button
-                onMouseDown={(e) => e.stopPropagation()}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onUpdateLayout({ ...layout, tiles: layout.tiles.filter(t => t.id !== tile.id) });
-                  if (selectedTileId === tile.id) onSelectTile(null);
-                }}
-                className="absolute top-1 right-1 z-10 w-5 h-5 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center opacity-0 group-hover/tile:opacity-100 transition-opacity hover:scale-110"
-              >
-                <X size={12} />
-              </button>
-              )}
-              {/* Crop mode indicator */}
-              {isCropping && (
-                <div className="absolute top-1 left-1 z-10 flex items-center gap-1 bg-warning/90 text-warning-foreground px-2 py-0.5 rounded text-[9px] font-bold">
-                  <Crop size={10} /> RECORTAR
-                </div>
-              )}
-              {tile.imagem_url ? (
-                <img
-                  src={tile.imagem_url}
-                  alt={tile.nome}
-                  className="w-full h-full pointer-events-none"
-                  draggable={false}
-                  style={{
-                    objectFit: crop.objectFit,
-                    objectPosition: crop.objectPosition,
-                    transform: `scale(${crop.scale}) translate(${crop.offsetX / (w || 1) * 100}%, ${crop.offsetY / (h || 1) * 100}%)`,
+                <button
+                  onMouseDown={(e) => e.stopPropagation()}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onUpdateLayout({ ...layout, tiles: layout.tiles.filter(t => t.id !== tile.id) });
+                    if (selectedTileId === tile.id) onSelectTile(null);
                   }}
-                />
+                  className="absolute top-1 right-1 z-10 w-5 h-5 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center opacity-0 group-hover/tile:opacity-100 transition-opacity hover:scale-110"
+                >
+                  <X size={12} />
+                </button>
+              )}
+
+              {tile.imagem_url ? (
+                isCropping ? (
+                  <CropOverlay
+                    imageUrl={tile.imagem_url}
+                    crop={crop}
+                    tileWidth={w * zoom}
+                    tileHeight={h * zoom}
+                    zoom={zoom}
+                    onCropChange={(newCrop) => {
+                      onUpdateLayout({
+                        ...layout,
+                        tiles: layout.tiles.map(t =>
+                          t.id === tile.id ? { ...t, imageCrop: newCrop } : t
+                        ),
+                      });
+                    }}
+                    onDone={() => setCropMode(null)}
+                  />
+                ) : (
+                  <CroppedImage src={tile.imagem_url} crop={crop} alt={tile.nome} />
+                )
               ) : (
                 <div className={`w-full h-full flex items-center justify-center border-2 rounded-lg ${tileColors[tile.tipo] || tileColors.custom}`}>
                   <span className="font-bold text-xs">{tile.nome}</span>
                 </div>
               )}
-              {/* Resize handle - hide in crop mode */}
+
+              {/* Resize handle */}
               {!readOnly && isSelected && !isCropping && (
                 <div
                   onMouseDown={(e) => {
@@ -384,16 +329,6 @@ export default function TileCanvasGrid({ layout, onUpdateLayout, selectedTileId,
                     borderBottomRightRadius: 'inherit',
                   }}
                 />
-              )}
-              {/* Crop mode: done button */}
-              {isCropping && (
-                <button
-                  onMouseDown={(e) => e.stopPropagation()}
-                  onClick={(e) => { e.stopPropagation(); setCropMode(null); }}
-                  className="absolute bottom-1 right-1 z-10 bg-primary text-primary-foreground px-2 py-0.5 rounded text-[9px] font-bold hover:brightness-110"
-                >
-                  ✓ OK
-                </button>
               )}
             </div>
           );
@@ -424,7 +359,7 @@ export default function TileCanvasGrid({ layout, onUpdateLayout, selectedTileId,
       {/* Info */}
       <div className="absolute top-4 left-4 text-[10px] text-muted-foreground glass rounded-md px-2 py-1 border border-border">
         {cropMode
-          ? 'Modo recorte: arraste para mover a imagem · Scroll para zoom · Clique fora ou OK para sair'
+          ? 'Modo recorte: arraste as bordas para ajustar · Clique fora ou ESC para sair'
           : `Arraste o fundo para mover · Scroll para zoom · Duplo clique para recortar · ${snapToGrid ? 'Snap ativo' : 'Posição livre'}`
         }
       </div>
