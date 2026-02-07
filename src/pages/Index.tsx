@@ -1,13 +1,12 @@
 import { useState } from 'react';
-import { mockSurgeries, mockAlerts, mockLayout } from '@/data/mockData';
-import { Surgery, HospitalLayout } from '@/data/types';
+import { mockSurgeries, mockAlerts } from '@/data/mockData';
+import { Surgery } from '@/data/types';
 import BigNumberCard from '@/components/dashboard/BigNumberCard';
 import MiniCharts from '@/components/dashboard/MiniCharts';
 import AlertsList from '@/components/dashboard/AlertsList';
 import SurgeryCard from '@/components/surgery/SurgeryCard';
 import SurgeryDetail from '@/components/surgery/SurgeryDetail';
-import TileCanvasGrid from '@/components/hospital/TileCanvasGrid';
-import TileLibrary from '@/components/hospital/TileLibrary';
+import FloorPlanEditor, { FloorZone } from '@/components/hospital/FloorPlanEditor';
 
 import {
   Activity, Clock, AlertTriangle, CalendarClock, DoorOpen,
@@ -22,8 +21,7 @@ export default function Index() {
   const [activeTab, setActiveTab] = useState<TabType>('dashboard');
   const [selectedSurgery, setSelectedSurgery] = useState<Surgery | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [layout, setLayout] = useState<HospitalLayout>(mockLayout);
-  const [selectedTileId, setSelectedTileId] = useState<string | null>(null);
+  const [zones, setZones] = useState<FloorZone[]>([]);
 
   const surgeries = mockSurgeries;
   const emAndamento = surgeries.filter(s => s.status_geral === 'em_andamento').length;
@@ -50,11 +48,11 @@ export default function Index() {
     { id: 'hospital', label: 'Hospital Virtual' },
   ];
 
-  const exportLayout = () => {
-    const blob = new Blob([JSON.stringify(layout, null, 2)], { type: 'application/json' });
+  const exportZones = () => {
+    const blob = new Blob([JSON.stringify(zones, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
-    a.href = url; a.download = 'layout.json'; a.click();
+    a.href = url; a.download = 'zones.json'; a.click();
     URL.revokeObjectURL(url);
   };
 
@@ -124,7 +122,7 @@ export default function Index() {
             {/* Hospital Virtual Preview */}
             <div className="glass rounded-xl border border-border overflow-hidden">
               <div className="flex items-center justify-between px-4 py-2 border-b border-border">
-                <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Mapa do Hospital — {layout.nome}</h3>
+                <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Planta do Hospital</h3>
                 <button
                   onClick={() => setActiveTab('hospital')}
                   className="text-[10px] text-primary hover:underline font-medium"
@@ -133,11 +131,10 @@ export default function Index() {
                 </button>
               </div>
               <div style={{ height: 600 }}>
-                <TileCanvasGrid
-                  layout={layout}
-                  onUpdateLayout={setLayout}
-                  selectedTileId={null}
-                  onSelectTile={() => {}}
+                <FloorPlanEditor
+                  imageUrl="/planta-hospital.png"
+                  zones={zones}
+                  onUpdateZones={setZones}
                   readOnly
                 />
               </div>
@@ -183,29 +180,22 @@ export default function Index() {
 
         {/* Hospital Virtual Tab */}
         {activeTab === 'hospital' && (
-          <div className="flex gap-6 animate-fade-up">
-            <div className="w-56 shrink-0 space-y-4">
-              <TileLibrary />
+          <div className="animate-fade-up">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h2 className="text-sm font-bold text-foreground">Planta do Hospital</h2>
+                <p className="text-[10px] text-muted-foreground">{zones.length} zonas marcadas</p>
+              </div>
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" className="h-7 text-xs" onClick={exportZones}><Download size={12} className="mr-1" />Exportar</Button>
+              </div>
             </div>
-            <div className="flex-1">
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  <h2 className="text-sm font-bold text-foreground">{layout.nome}</h2>
-                  <p className="text-[10px] text-muted-foreground">{layout.tiles.length} tiles · Última edição: {new Date(layout.updated_at).toLocaleString('pt-BR')}</p>
-                </div>
-                <div className="flex gap-2">
-                  <Button variant="outline" size="sm" className="h-7 text-xs" onClick={exportLayout}><Download size={12} className="mr-1" />Exportar</Button>
-                  <Button variant="outline" size="sm" className="h-7 text-xs"><Upload size={12} className="mr-1" />Importar</Button>
-                </div>
-              </div>
-              <div style={{ height: 'calc(100vh - 220px)' }}>
-                <TileCanvasGrid
-                  layout={layout}
-                  onUpdateLayout={setLayout}
-                  selectedTileId={selectedTileId}
-                  onSelectTile={setSelectedTileId}
-                />
-              </div>
+            <div style={{ height: 'calc(100vh - 200px)' }}>
+              <FloorPlanEditor
+                imageUrl="/planta-hospital.png"
+                zones={zones}
+                onUpdateZones={setZones}
+              />
             </div>
           </div>
         )}
