@@ -40,6 +40,7 @@ export default function TileCanvasGrid({ layout, onUpdateLayout, selectedTileId,
   const [isPanning, setIsPanning] = useState(false);
   const [panStart, setPanStart] = useState({ x: 0, y: 0 });
   const [dragTile, setDragTile] = useState<{ id: string; offsetX: number; offsetY: number } | null>(null);
+  const [resizeTile, setResizeTile] = useState<{ id: string; startX: number; startY: number; startW: number; startH: number } | null>(null);
   const [snapToGrid, setSnapToGrid] = useState(false);
 
   const SNAP = 20;
@@ -97,6 +98,20 @@ export default function TileCanvasGrid({ layout, onUpdateLayout, selectedTileId,
       return;
     }
 
+    if (resizeTile) {
+      const dx = (e.clientX - resizeTile.startX) / zoom;
+      const dy = (e.clientY - resizeTile.startY) / zoom;
+      const newW = Math.max(1, Math.round((resizeTile.startW * TILE_UNIT + dx) / TILE_UNIT * 4) / 4);
+      const newH = Math.max(1, Math.round((resizeTile.startH * TILE_UNIT + dy) / TILE_UNIT * 4) / 4);
+      onUpdateLayout({
+        ...layout,
+        tiles: layout.tiles.map(t =>
+          t.id === resizeTile.id ? { ...t, tamanho: { w: newW, h: newH } } : t
+        ),
+      });
+      return;
+    }
+
     if (dragTile) {
       const pos = screenToCanvas(e.clientX, e.clientY);
       let x = pos.x - dragTile.offsetX;
@@ -114,11 +129,12 @@ export default function TileCanvasGrid({ layout, onUpdateLayout, selectedTileId,
         ),
       });
     }
-  }, [isPanning, panStart, dragTile, screenToCanvas, snapToGrid, layout, onUpdateLayout]);
+  }, [isPanning, panStart, dragTile, resizeTile, screenToCanvas, snapToGrid, layout, onUpdateLayout, zoom]);
 
   const handleMouseUp = useCallback(() => {
     setIsPanning(false);
     setDragTile(null);
+    setResizeTile(null);
   }, []);
 
   const handleTileMouseDown = useCallback((e: React.MouseEvent, tile: TileData) => {
@@ -258,7 +274,6 @@ export default function TileCanvasGrid({ layout, onUpdateLayout, selectedTileId,
                   if (selectedTileId === tile.id) onSelectTile(null);
                 }}
                 className="absolute top-1 right-1 z-10 w-5 h-5 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center opacity-0 group-hover/tile:opacity-100 transition-opacity hover:scale-110"
-                style={{ fontSize: Math.max(8, 10 * zoom) }}
               >
                 <X size={12} />
               </button>
@@ -267,21 +282,33 @@ export default function TileCanvasGrid({ layout, onUpdateLayout, selectedTileId,
                 <img
                   src={tile.imagem_url}
                   alt={tile.nome}
-                  className="w-full h-full object-cover pointer-events-none"
+                  className="w-full h-full pointer-events-none"
                   draggable={false}
+                  style={{
+                    objectFit: tile.imageCrop?.objectFit || 'cover',
+                    objectPosition: tile.imageCrop?.objectPosition || 'center center',
+                    transform: `scale(${tile.imageCrop?.scale || 1})`,
+                  }}
                 />
               ) : (
                 <div className={`w-full h-full flex items-center justify-center border-2 rounded-lg ${tileColors[tile.tipo] || tileColors.custom}`}>
                   <span className="font-bold text-xs">{tile.nome}</span>
                 </div>
               )}
-              {/* Label overlay */}
-              <div className="absolute bottom-0 left-0 right-0 bg-background/80 backdrop-blur-sm px-1.5 py-0.5 flex items-center justify-between"
-                style={{ fontSize: Math.max(8, 10 * zoom) }}
-              >
-                <span className="font-semibold text-foreground truncate">{tile.nome}</span>
-                <span className={`w-2 h-2 rounded-full shrink-0 ml-1 ${statusDot[tile.status]}`} />
-              </div>
+              {/* Resize handle */}
+              {!readOnly && isSelected && (
+                <div
+                  onMouseDown={(e) => {
+                    e.stopPropagation();
+                    setResizeTile({ id: tile.id, startX: e.clientX, startY: e.clientY, startW: tile.tamanho.w, startH: tile.tamanho.h });
+                  }}
+                  className="absolute bottom-0 right-0 w-4 h-4 cursor-se-resize z-20"
+                  style={{
+                    background: 'linear-gradient(135deg, transparent 50%, hsl(var(--primary)) 50%)',
+                    borderBottomRightRadius: 'inherit',
+                  }}
+                />
+              )}
             </div>
           );
         })}

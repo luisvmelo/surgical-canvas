@@ -45,11 +45,18 @@ export interface Surgery {
   stages: Stage[];
 }
 
+export interface ImageCrop {
+  objectFit: 'cover' | 'contain' | 'fill';
+  objectPosition: string; // e.g. "center center", "top left"
+  scale: number; // 1 = normal, >1 = zoomed in
+}
+
 export interface TileData {
   id: string;
   nome: string;
   tipo: TileType;
   imagem_url?: string;
+  imageCrop?: ImageCrop;
   capacidade: number;
   status: TileStatus;
   propriedades: Record<string, any>;
