@@ -27,11 +27,24 @@ interface TileCanvasGridProps {
 const TILE_UNIT = 80;
 const DEFAULT_CROP: ImageCrop = { x: 0, y: 0, w: 1, h: 1 };
 
-function CroppedImage({ src, crop, alt }: { src: string; crop: ImageCrop; alt: string }) {
+function CroppedImage({ src, crop, alt, rotation }: { src: string; crop: ImageCrop; alt: string; rotation: number }) {
   const hasCrop = crop.x !== 0 || crop.y !== 0 || crop.w !== 1 || crop.h !== 1;
 
+  // For rotated images, we render the image rotated inside the container
+  // Container has swapped dimensions, so image needs to fill the "original" orientation
+  const rotStyle: React.CSSProperties = rotation % 360 !== 0 ? {
+    transform: `rotate(${rotation}deg)`,
+    transformOrigin: 'center center',
+    width: rotation % 180 !== 0 ? '100%' : '100%',
+    height: rotation % 180 !== 0 ? '100%' : '100%',
+  } : {};
+
   if (!hasCrop) {
-    return <img src={src} alt={alt} className="w-full h-full object-cover" draggable={false} />;
+    return (
+      <div className="w-full h-full overflow-hidden">
+        <img src={src} alt={alt} className="w-full h-full object-cover" draggable={false} style={rotStyle} />
+      </div>
+    );
   }
 
   return (
@@ -44,6 +57,7 @@ function CroppedImage({ src, crop, alt }: { src: string; crop: ImageCrop; alt: s
         backgroundSize: `${100 / crop.w}% ${100 / crop.h}%`,
         backgroundPosition: `${crop.w < 1 ? (crop.x / (1 - crop.w)) * 100 : 0}% ${crop.h < 1 ? (crop.y / (1 - crop.h)) * 100 : 0}%`,
         backgroundRepeat: 'no-repeat',
+        ...rotStyle,
       }}
     />
   );
@@ -291,7 +305,6 @@ export default function TileCanvasGrid({ layout, onUpdateLayout, selectedTileId,
                 top: pan.y + tile.posicao.y * zoom,
                 width: w * zoom,
                 height: h * zoom,
-                transform: `rotate(${tile.rotacao}deg)`,
                 zIndex: isDragging ? 100 : isCropping ? 200 : isSelected ? 50 : 1,
                 transition: isDragging ? 'none' : 'box-shadow 0.2s',
               }}
@@ -313,7 +326,7 @@ export default function TileCanvasGrid({ layout, onUpdateLayout, selectedTileId,
                       onUpdateLayout({
                         ...layout,
                         tiles: layout.tiles.map(t =>
-                          t.id === tile.id ? { ...t, rotacao: (t.rotacao + 90) % 360 } : t
+                          t.id === tile.id ? { ...t, rotacao: (t.rotacao + 90) % 360, tamanho: { w: t.tamanho.h, h: t.tamanho.w } } : t
                         ),
                       });
                     }}
@@ -354,7 +367,7 @@ export default function TileCanvasGrid({ layout, onUpdateLayout, selectedTileId,
                     onDone={() => applyCropAndExit(tile.id)}
                   />
                 ) : (
-                  <CroppedImage src={tile.imagem_url} crop={crop} alt={tile.nome} />
+                  <CroppedImage src={tile.imagem_url} crop={crop} alt={tile.nome} rotation={tile.rotacao} />
                 )
               ) : (
                 <div className={`w-full h-full flex items-center justify-center border-2 rounded-lg ${tileColors[tile.tipo] || tileColors.custom}`}>
