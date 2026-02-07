@@ -169,7 +169,7 @@ export default function TileCanvasGrid({ layout, onUpdateLayout, selectedTileId,
   const gridSize = SNAP * zoom;
 
   return (
-    <div className="relative rounded-xl border border-border overflow-hidden bg-background" style={{ height: 'calc(100vh - 200px)' }}>
+    <div className="relative rounded-xl border-0 overflow-hidden bg-background" style={{ height: '100%', minHeight: 300 }}>
       {/* Canvas */}
       <div
         ref={containerRef}
