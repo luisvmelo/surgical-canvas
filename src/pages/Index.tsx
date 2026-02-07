@@ -8,7 +8,7 @@ import SurgeryCard from '@/components/surgery/SurgeryCard';
 import SurgeryDetail from '@/components/surgery/SurgeryDetail';
 import TileCanvasGrid from '@/components/hospital/TileCanvasGrid';
 import TileLibrary from '@/components/hospital/TileLibrary';
-import TilePropertyPanel from '@/components/hospital/TilePropertyPanel';
+
 import {
   Activity, Clock, AlertTriangle, CalendarClock, DoorOpen,
   RotateCcw, Timer, Search, Download, Upload
@@ -42,7 +42,7 @@ export default function Index() {
     s.cirurgiao.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const selectedTile = selectedTileId ? layout.tiles.find(t => t.id === selectedTileId) : null;
+
 
   const tabs: { id: TabType; label: string }[] = [
     { id: 'dashboard', label: 'Dashboard' },
@@ -207,16 +207,6 @@ export default function Index() {
                 />
               </div>
             </div>
-            {selectedTile && (
-              <div className="w-64 shrink-0">
-                <TilePropertyPanel
-                  tile={selectedTile}
-                  layout={layout}
-                  onUpdateLayout={setLayout}
-                  onClose={() => setSelectedTileId(null)}
-                />
-              </div>
-            )}
           </div>
         )}
       </main>

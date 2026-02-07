@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { TileData, HospitalLayout, ImageCrop } from '@/data/types';
-import { ZoomIn, ZoomOut, Maximize, Grid3X3, X } from 'lucide-react';
+import { ZoomIn, ZoomOut, Maximize, Grid3X3, X, RotateCw } from 'lucide-react';
 import CropOverlay from './CropOverlay';
 
 const tileColors: Record<string, string> = {
@@ -138,8 +138,13 @@ export default function TileCanvasGrid({ layout, onUpdateLayout, selectedTileId,
     if (resizeTile) {
       const dx = (e.clientX - resizeTile.startX) / zoom;
       const dy = (e.clientY - resizeTile.startY) / zoom;
-      const newW = Math.max(1, Math.round((resizeTile.startW * TILE_UNIT + dx) / TILE_UNIT * 4) / 4);
-      const newH = Math.max(1, Math.round((resizeTile.startH * TILE_UNIT + dy) / TILE_UNIT * 4) / 4);
+      // Proportional resize: use the larger delta
+      const aspect = resizeTile.startW / resizeTile.startH;
+      const deltaByX = dx / TILE_UNIT;
+      const deltaByY = dy / TILE_UNIT;
+      const delta = Math.abs(deltaByX) > Math.abs(deltaByY) ? deltaByX : deltaByY;
+      const newW = Math.max(0.5, Math.round((resizeTile.startW + delta) * 4) / 4);
+      const newH = Math.max(0.5, Math.round((newW / aspect) * 4) / 4);
       onUpdateLayout({
         ...layout,
         tiles: layout.tiles.map(t =>
@@ -298,19 +303,36 @@ export default function TileCanvasGrid({ layout, onUpdateLayout, selectedTileId,
                     : ''
               } ${isDragging ? 'opacity-80 scale-105' : !isCropping ? 'hover:brightness-110' : ''}`}
             >
-              {/* Delete button */}
+              {/* Tile controls - delete + rotate */}
               {!readOnly && !isCropping && (
-                <button
-                  onMouseDown={(e) => e.stopPropagation()}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onUpdateLayout({ ...layout, tiles: layout.tiles.filter(t => t.id !== tile.id) });
-                    if (selectedTileId === tile.id) onSelectTile(null);
-                  }}
-                  className="absolute top-1 right-1 z-10 w-5 h-5 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center opacity-0 group-hover/tile:opacity-100 transition-opacity hover:scale-110"
-                >
-                  <X size={12} />
-                </button>
+                <div className="absolute top-1 right-1 z-10 flex gap-1 opacity-0 group-hover/tile:opacity-100 transition-opacity">
+                  <button
+                    onMouseDown={(e) => e.stopPropagation()}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onUpdateLayout({
+                        ...layout,
+                        tiles: layout.tiles.map(t =>
+                          t.id === tile.id ? { ...t, rotacao: (t.rotacao + 90) % 360 } : t
+                        ),
+                      });
+                    }}
+                    className="w-5 h-5 rounded-full bg-secondary/90 text-foreground flex items-center justify-center hover:scale-110 transition-transform"
+                  >
+                    <RotateCw size={10} />
+                  </button>
+                  <button
+                    onMouseDown={(e) => e.stopPropagation()}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onUpdateLayout({ ...layout, tiles: layout.tiles.filter(t => t.id !== tile.id) });
+                      if (selectedTileId === tile.id) onSelectTile(null);
+                    }}
+                    className="w-5 h-5 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center hover:scale-110 transition-transform"
+                  >
+                    <X size={12} />
+                  </button>
+                </div>
               )}
 
               {tile.imagem_url ? (
